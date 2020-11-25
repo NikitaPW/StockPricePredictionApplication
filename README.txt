@@ -1,1 +1,1 @@
-To start launch runme.bat
+To start the application launch runme.bat
