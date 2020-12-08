@@ -1,3 +1,4 @@
+import os
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from sklearn import preprocessing
@@ -6,18 +7,17 @@ from yahoo_fin import stock_info as si
 from collections import deque
 from parameters import *
 
-
 import numpy as np
 import pandas as pd
 import random
+from parameters import row_data, TRAIN_RAW
 
 
 def load_data(ticker, n_steps=50, scale=True, shuffle=True, lookup_step=1,
-              test_size=0.2, feature_columns=['High', 'Low', 'Open', 'Close', 'Volume']):
+              test_size=0.2, feature_columns=['High', 'Low', 'Open', 'Close', 'Volume', "OpenMax", "OpenMin", "Day"]):
     """
     Loads data from Yahoo Finance source, as well as scaling, shuffling, normalizing and splitting.
     Params:
-        ticker (str/pd.DataFrame): the ticker you want to load, examples include AAPL, TESL, etc.
         n_steps (int): the historical sequence length (i.e window size) used to predict, default is 50
         scale (bool): whether to scale prices from 0 to 1, default is True
         shuffle (bool): whether to shuffle the data, default is True
@@ -27,24 +27,18 @@ def load_data(ticker, n_steps=50, scale=True, shuffle=True, lookup_step=1,
     """
     # see if ticker is already a loaded stock from yahoo finance
     if isinstance(ticker, str):
-        # load it from yahoo_fin library
         if TRAIN_RAW == True:
-            header_list = ["High", "Low", "Open", "Close", "Volume"]
-            df = pd.read_csv(os.path.join("data", row_data), sep=';', names=header_list, header=0, encoding='latin-1')
-        else:
-            df = si.get_data(ticker, start_date='06.07.2010', end_date='06.05.2020')
+            cwd = os.getcwd()
+            cwd = os.path.basename(cwd)
+            if cwd == 'lstm':
+                filedir = "../data/"+row_data
+            else:
+                filedir = "data/"+row_data
+            header_list = ["Data", "Open", 'High', 'Low', 'Close', 'Volume', "OpenMax", "OpenMin", "Day"]
+            df = pd.read_csv(filedir, sep=',', names=header_list, header=0, encoding='latin-1')
 
         index = df.index
         number_of_rows = len(index)
-        if (number_of_rows < 40):
-            TEST_SIZE = 5 / number_of_rows
-            TRAIN_SIZE = number_of_rows - 5
-        elif (number_of_rows < 90):
-            TEST_SIZE = 5 / number_of_rows
-            TRAIN_SIZE = number_of_rows - 5
-        else:
-            TEST_SIZE = 5 / number_of_rows
-            TRAIN_SIZE = number_of_rows - 5
 
     elif isinstance(ticker, pd.DataFrame):
         # already loaded, use it directly
@@ -54,13 +48,9 @@ def load_data(ticker, n_steps=50, scale=True, shuffle=True, lookup_step=1,
 
     for col in feature_columns:
         df[col] = df[col].astype(float)
+
     # this will contain all the elements we want to return from this function
     result = {}
-    # we will also return the original dataframe itself
-    result['df'] = df.copy()
-
-    # make sure that the passed feature_columns exist in the dataframe
-
 
     if scale:
         column_scaler = {}
@@ -73,9 +63,10 @@ def load_data(ticker, n_steps=50, scale=True, shuffle=True, lookup_step=1,
         # add the MinMaxScaler instances to the result returned
         result["column_scaler"] = column_scaler
 
+
     # add the target column (label) by shifting by `lookup_step`
     df['future'] = df['Close'].shift(-lookup_step)
-
+    result['df'] = df.copy()
     # last `lookup_step` columns contains NaN in future column
     # get them before droping NaNs
     last_sequence = np.array(df[feature_columns].tail(lookup_step))
@@ -85,17 +76,11 @@ def load_data(ticker, n_steps=50, scale=True, shuffle=True, lookup_step=1,
 
     sequence_data = []
     sequences = deque(maxlen=n_steps)
-    training_close_values = []
+
     for entry, target in zip(df[feature_columns].values, df['future'].values):
         sequences.append(entry)
         if len(sequences) == n_steps:
             sequence_data.append([np.array(sequences), target])
-
-    for entry in df["Close"].values:
-        training_close_values.append(entry)
-
-    result['training_close_values'] = training_close_values
-
 
     # get the last sequence by appending the last `n_step` sequence with `lookup_step` sequence
     # for instance, if n_steps=50 and lookup_step=10, last_sequence should be of 59 (that is 50+10-1) length
@@ -120,9 +105,19 @@ def load_data(ticker, n_steps=50, scale=True, shuffle=True, lookup_step=1,
     X = X.reshape((X.shape[0], X.shape[2], X.shape[1]))
 
     # split the dataset
+    result["X"] = X[:number_of_rows - n_steps - 5, :]
+    result["y"] = y[:number_of_rows - n_steps - 5, ]
+    result["X_predict"] = X[number_of_rows - n_steps - 5:number_of_rows - n_steps, :]
+    result["y_predict"] = y[number_of_rows - n_steps - 5:number_of_rows - n_steps]
+
+    X = X[:number_of_rows - n_steps - 5, :]
+    y = y[:number_of_rows - n_steps - 5]
+
+
     result["X_train"], result["X_test"], result["y_train"], result["y_test"] = train_test_split(X, y,
                                                                                                 test_size=TEST_SIZE,
-                                                                                                shuffle=True)
+                                                                                                shuffle=False)
+
     # return the result
     return result
 
@@ -148,3 +143,7 @@ def create_model(input_length, units=256, cell=LSTM, n_layers=2, dropout=0.3,
     model.summary()
 
     return model
+
+
+if __name__ == '__main__':
+    load_data(ticker, N_STEPS, lookup_step=LOOKUP_STEP, test_size=TEST_SIZE, feature_columns=FEATURE_COLUMNS)

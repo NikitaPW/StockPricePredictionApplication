@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 from datetime import datetime, timedelta
+import pandas as pd
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -14,25 +15,69 @@ class Window(QWidget):
         self.title = "Stock Price Prediction"
         self.left = 300
         self.top = 300
-        self.width = 520
-        self.height = 400
+        self.width = 500
+        self.height = 500
         self.initUI()
 
     def button5_clicked(self):
         now = datetime.now()
-        end = str(now.year) + str(now.month) + str(now.day)
+        end = str(now.year)
+        if now.month < 10:
+            end = end + str(now.month).zfill(2)
+        else:
+            end = end + str(now.month)
+
+        if now.day < 10:
+            end = end + str(now.day).zfill(2)
+        else:
+            end = end + str(now.day)
+
         timevalue = self.combobox1.currentText()
-        if (timevalue == '30 + 5 days'):
+        if timevalue == '30 + 5 days':
             dateinpast = datetime.now() - timedelta(days=35)
-            start = str(dateinpast.year) + str(dateinpast.month) + str(dateinpast.day)
+            start = str(dateinpast.year)
+            date = QDate(dateinpast.year, dateinpast.month, dateinpast.day)
+            self.dateedit.setDate(date)
+            if dateinpast.month < 10:
+                start = start + str(dateinpast.month).zfill(2)
+            else:
+                start = start + str(dateinpast.month)
+
+            if dateinpast.day < 10:
+                start = start + str(dateinpast.day).zfill(2)
+            else:
+                start = start + str(dateinpast.day)
+
             self.downloadData(start, end)
         elif (timevalue == '90 + 5 days'):
             dateinpast = datetime.now() - timedelta(days=95)
-            start = str(dateinpast.year) + str(dateinpast.month) + str(dateinpast.day)
+            date = QDate(dateinpast.year, dateinpast.month, dateinpast.day)
+            self.dateedit.setDate(date)
+            start = str(dateinpast.year)
+            if dateinpast.month < 10:
+                start = start + str(dateinpast.month).zfill(2)
+            else:
+                start = start + str(dateinpast.month)
+
+            if dateinpast.day < 10:
+                start = start + str(dateinpast.day).zfill(2)
+            else:
+                start = start + str(dateinpast.day)
             self.downloadData(start, end)
         else:
             dateinpast = datetime.now() - timedelta(days=370)
-            start = str(dateinpast.year) + str(dateinpast.month) + str(dateinpast.day)
+            date = QDate(dateinpast.year, dateinpast.month, dateinpast.day)
+            self.dateedit.setDate(date)
+            start = str(dateinpast.year)
+            if dateinpast.month < 10:
+                start = start + str(dateinpast.month).zfill(2)
+            else:
+                start = start + str(dateinpast.month)
+
+            if dateinpast.day < 10:
+                start = start + str(dateinpast.day).zfill(2)
+            else:
+                start = start + str(dateinpast.day)
             self.downloadData(start, end)
 
     def svr_chosen(selfself):
@@ -52,16 +97,70 @@ class Window(QWidget):
     def downloadData(self, start, end):
         url = 'https://stooq.com/q/d/l/?s=wig20&d1=' + start + '&d2=' + end + '&i=d&c=1'
         response = requests.get(url)
-        with open('data/wig20_d.csv', 'wb') as f:
-            f.write(response.content)
-
+        rawData = pd.read_csv(url, delimiter=';')
+        rawData['OpenMax'] = 0.0
+        rawData['OpenMin'] = 0.0
+        rawData['Day'] = 1
+        n = len(rawData.index)
+        i = 0
+        min = rawData.iloc[0]['Open']
+        max = rawData.iloc[0]['Open']
+        while i < n:
+            rawData.at[i, 'Day'] = datetime.strptime(rawData.iloc[i]['Date'],'%Y-%m-%d').weekday()+1
+            if (rawData.at[i, 'Open'] > max):
+                max = rawData.at[i, 'Open']
+            if (rawData.at[i, 'Open'] < min):
+                min = rawData.at[i, 'Open']
+            rawData.at[i, 'OpenMax'] = max
+            rawData.at[i, 'OpenMin'] = min
+            i = i + 1
+        outdir = './data'
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        rawData.to_csv('data/wig20_d.csv', index=False, header=True)
         self.button1.setEnabled(True)
         self.button2.setEnabled(True)
         self.button3.setEnabled(True)
 
-
     def open_doc(self):
         os.system("notepad.exe Documentation.txt")
+
+    def dropDownValueChanged(self):
+        timevalue = self.combobox1.currentText()
+        if timevalue == '30 + 5 days':
+            dateinpast = datetime.now() - timedelta(days=35)
+            date = QDate(dateinpast.year, dateinpast.month, dateinpast.day)
+            self.dateedit.setDate(date)
+        elif (timevalue == '90 + 5 days'):
+            dateinpast = datetime.now() - timedelta(days=95)
+            date = QDate(dateinpast.year, dateinpast.month, dateinpast.day)
+            self.dateedit.setDate(date)
+        else:
+            dateinpast = datetime.now() - timedelta(days=370)
+            date = QDate(dateinpast.year, dateinpast.month, dateinpast.day)
+            self.dateedit.setDate(date)
+
+
+    def startDateChanged(self, date):
+        date = self.dateedit.date()
+        dateinpast = date
+        timevalue = self.combobox1.currentText()
+        if timevalue == '30 + 5 days':
+            dateinpast = date.addDays(-35)
+            if date > dateinpast:
+                date = dateinpast
+
+        elif (timevalue == '90 + 5 days'):
+            dateinpast = date.addDays(-95)
+            if date > dateinpast:
+                date = dateinpast
+
+        else:
+            dateinpast = date.addDays(-370)
+            if date > dateinpast:
+                date = dateinpast
+
+        self.dateedit.setDate(date)
 
     def initUI(self):
 
@@ -74,7 +173,7 @@ class Window(QWidget):
 
         label3 = QLabel(self)
         label3.setGeometry(50, 50, 400, 32)
-        label3.setText("Please choose a period for training")
+        label3.setText("Period for training")
         label3.setFont(QFont('Arial', 10))
         label3.move(50, 60)
 
@@ -83,6 +182,21 @@ class Window(QWidget):
         self.combobox1.resize(120, 30)
         comboList = ["30 + 5 days", "90 + 5 days", "365 + 5 days"]
         self.combobox1.addItems(comboList)
+        self.combobox1.currentTextChanged.connect(self.dropDownValueChanged)
+
+        label6 = QLabel(self)
+        label6.setGeometry(50, 50, 400, 32)
+        label6.setText("Starting date")
+        label6.setFont(QFont('Arial', 10))
+        label6.move(250, 60)
+
+        self.dateedit = QDateEdit(self, calendarPopup=True)
+        dateNow = datetime.now() - timedelta(days=35)
+        date = QDate(dateNow.year, dateNow.month, dateNow.day)
+        self.dateedit.setDate(date)
+        self.dateedit.resize(120, 30)
+        self.dateedit.move(250, 100)
+        #self.dateedit.dateChanged.connect(self.startDateChanged)
 
         button5 = QPushButton("Download data", self)
         button5.move(50, 140)
