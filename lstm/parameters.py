@@ -9,9 +9,9 @@ N_STEPS = 1
 LOOKUP_STEP = 1
 
 # test ratio size, 0.2 is 20%
-TEST_SIZE = 0.2
+TEST_SIZE = 0.1
 # features to use
-FEATURE_COLUMNS = ["Open", 'Close']
+FEATURE_COLUMNS = ["Open", 'Close', 'Volume', "OpenMax", "OpenMin", "Day"]
 # date now
 date_now = time.strftime("%Y-%m-%d")
 
@@ -29,7 +29,7 @@ DROPOUT = 0.4
 
 # mean squared error loss
 LOSS = "mse"
-OPTIMIZER = "sgd"
+OPTIMIZER = "rmsprop"
 BATCH_SIZE = 64
 EPOCHS = 300
 
@@ -40,4 +40,4 @@ ticker_data_filename = os.path.join("data", f"WIG20_d.csv")
 model_name = f"{date_now}_{ticker}-{LOSS}-{CELL.__name__}-seq-{N_STEPS}-step-{LOOKUP_STEP}-layers-{N_LAYERS}-units-{UNITS}"
 
 # Row data name
-row_data = f"WIG20_d.csv"
+row_data = f"wig20_d.csv"

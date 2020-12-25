@@ -37,7 +37,7 @@ class Window(QWidget):
         label1.setGeometry(15, 15, 300, 32)
         label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         label1.setText("LSTM for Stock Price Prediction")
-        label1.move(100, 15)
+        label1.move(75, 15)
         label1.setAlignment(Qt.AlignCenter)
         label1.setFont(QFont('Arial', 16))
 
@@ -65,7 +65,7 @@ class Window(QWidget):
         self.splayers.setGeometry(50, 50, 150, 20)
         self.splayers.valueChanged.connect(self.numberOfLayersChanged)
         self.splayers.setValue(3)
-        self.splayers.setMinimum(1)
+        self.splayers.setMinimum(2)
         self.splayers.setMaximum(20)
         self.splayers.move(250, 75)
 
@@ -135,7 +135,6 @@ class Window(QWidget):
             self._before = after
             self.textModified.emit(before, after)
 
-
     def plot_graph(self, model, data):
 
         X_test = data["X_predict"]
@@ -145,19 +144,16 @@ class Window(QWidget):
         y_test = np.squeeze(data["column_scaler"]["Close"].inverse_transform(np.expand_dims(y_test, axis=0)))
         y_pred = np.squeeze(data["column_scaler"]["Close"].inverse_transform(y_pred))
 
-        df = pd.DataFrame(y_pred)
-        df.to_csv("test3month.csv")
-
         tableau20 = [(31/255, 119/255, 180/255), (174/255, 199/255, 232/255), (255/255, 127/255, 14/255), (255/255, 187/255, 120/255)]
 
         plt.title('Prediction')
+        plt.ylim([y_test[0] - 300, y_test[0] + 300])
         plt.plot(y_test[-5:], lw=2.5, color=tableau20[2])
         plt.plot(y_pred[-5:], lw=2.5, color=tableau20[3])
         plt.xlabel("Days")
         plt.ylabel("Price")
         plt.legend(["Actual Price", "Predicted Price"])
 
-        plt.ylim(0, 2000)
         self.textbox.setPlainText(self.textbox.toPlainText() + "Predicted results " + str(y_pred[-5:]) + "\n")
         plt.show()
 
@@ -168,10 +164,12 @@ class Window(QWidget):
         y_train = data["y"]
         y_train = np.squeeze(data["column_scaler"]["Close"].inverse_transform(np.expand_dims(y_train, axis=0)))
         x_train = np.squeeze(data["column_scaler"]["Close"].inverse_transform(x_train))
-        df = pd.DataFrame(x_train)
-        df.to_csv("train3month.csv")
-        plt.plot(x_train)
-        plt.plot(y_train)
+
+        tableau20 = [(31 / 255, 119 / 255, 180 / 255), (174 / 255, 199 / 255, 232 / 255),
+                     (255 / 255, 127 / 255, 14 / 255), (255 / 255, 187 / 255, 120 / 255)]
+        plt.plot(y_train, lw=2.5, color=tableau20[2])
+        plt.plot(x_train, lw=2.5, color=tableau20[3])
+
         plt.title('Training phase')
         plt.xlabel("Days")
         plt.ylabel("Price")

@@ -15,7 +15,7 @@ class Window(QWidget):
         self.title = "Stock Price Prediction"
         self.left = 300
         self.top = 300
-        self.width = 500
+        self.width = 550
         self.height = 500
         self.initUI()
 
