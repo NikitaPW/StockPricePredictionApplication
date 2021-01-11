@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import requests
 
+PATH = os.getcwd()
 
 class Window(QWidget):
     def __init__(self):
@@ -15,9 +16,87 @@ class Window(QWidget):
         self.title = "Stock Price Prediction"
         self.left = 300
         self.top = 300
-        self.width = 550
-        self.height = 500
+        self.width = 600
+        self.height = 600
         self.initUI()
+
+    def initUI(self):
+
+        label1 = QLabel('Arial font', self)
+        label1.setGeometry(60, 15, 300, 32)
+        label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        label1.setText("Stock Price Prediction")
+        label1.setFont(QFont('Arial', 16))
+        label1.move(115, 20)
+        label1.setAlignment(Qt.AlignCenter)
+
+        label3 = QLabel(self)
+        label3.setGeometry(50, 50, 300, 32)
+        label3.setText("Period for training")
+        label3.setFont(QFont('Arial', 10))
+        label3.move(50, 60)
+
+        self.combobox1 = QComboBox(self)
+        self.combobox1.move(50, 100)
+        self.combobox1.resize(120, 30)
+        comboList = ["30 + 5 days", "90 + 5 days", "365 + 5 days"]
+        self.combobox1.addItems(comboList)
+        self.combobox1.currentTextChanged.connect(self.dropDownValueChanged)
+
+        label6 = QLabel(self)
+        label6.setGeometry(50, 50, 100, 32)
+        label6.setText("Starting date")
+        label6.setFont(QFont('Arial', 10))
+        label6.move(300, 60)
+
+        self.dateedit = QDateEdit(self, calendarPopup=True)
+        dateNow = datetime.now() - timedelta(days=35)
+        date = QDate(dateNow.year, dateNow.month, dateNow.day)
+        self.dateedit.setDate(date)
+        self.dateedit.resize(120, 30)
+        self.dateedit.move(300, 100)
+        #self.dateedit.dateChanged.connect(self.startDateChanged)
+
+        button5 = QPushButton("Download data", self)
+        button5.move(50, 140)
+        button5.resize(110, 30)
+        button5.clicked.connect(self.button5_clicked)
+
+        label4 = QLabel(self)
+        label4.setGeometry(50, 50, 400, 32)
+        label4.setText("Select an algorithm for solution")
+        label4.setFont(QFont('Arial', 10))
+        label4.move(70, 180)
+        label4.setAlignment(Qt.AlignCenter)
+
+        self.button1 = QPushButton("SVR", self)
+        self.button1.move(50, 220)
+        self.button1.resize(130, 50)
+        self.button1.clicked.connect(self.svr_chosen)
+        self.button1.setEnabled(False)
+
+        self.button2 = QPushButton("LSTM", self)
+        self.button2.move(200, 220)
+        self.button2.resize(130, 50)
+        self.button2.clicked.connect(self.lstm_chosen)
+        self.button2.setEnabled(False)
+
+        self.button3 = QPushButton("CNN", self)
+        self.button3.move(350, 220)
+        self.button3.resize(130, 50)
+        self.button3.clicked.connect(self.cnn_chosen)
+        self.button3.setEnabled(False)
+
+        button4 = QPushButton("Documentation", self)
+        button4.move(260, 320)
+        button4.resize(100, 30)
+        button4.clicked.connect(self.open_doc)
+
+        qbtn = QPushButton('Quit', self)
+        qbtn.clicked.connect(QApplication.instance().quit)
+        qbtn.resize(qbtn.sizeHint())
+        qbtn.move(380, 320)
+        qbtn.resize(100, 30)
 
     def button5_clicked(self):
         now = datetime.now()
@@ -81,18 +160,17 @@ class Window(QWidget):
             self.downloadData(start, end)
 
     def svr_chosen(selfself):
-        subprocess.call(["svrmat/SVR.exe"])
+        subprocess.call(["svrmat/SVRMenu.exe"])
 
 
     def lstm_chosen(self):
         os.system("python lstm/start.py")
 
     def cnn_chosen(self):
-        savedPath = os.getcwd()
-        newPath = savedPath + "/cnnr"
+        newPath = PATH + "/cnnr"
         os.chdir(newPath)
-        subprocess.call(["app-starter.exe"])
-        os.system("cd ../")
+        subprocess.call(['runme.bat'])
+        os.chdir(PATH)
 
     def downloadData(self, start, end):
         url = 'https://stooq.com/q/d/l/?s=wig20&d1=' + start + '&d2=' + end + '&i=d&c=1'
@@ -162,81 +240,7 @@ class Window(QWidget):
 
         self.dateedit.setDate(date)
 
-    def initUI(self):
 
-        label1 = QLabel('Arial font', self)
-        label1.setGeometry(60, 15, 400, 32)
-        label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        label1.setText("Stock Price Prediction")
-        label1.setFont(QFont('Arial', 16))
-        label1.setAlignment(Qt.AlignCenter)
-
-        label3 = QLabel(self)
-        label3.setGeometry(50, 50, 400, 32)
-        label3.setText("Period for training")
-        label3.setFont(QFont('Arial', 10))
-        label3.move(50, 60)
-
-        self.combobox1 = QComboBox(self)
-        self.combobox1.move(50, 100)
-        self.combobox1.resize(120, 30)
-        comboList = ["30 + 5 days", "90 + 5 days", "365 + 5 days"]
-        self.combobox1.addItems(comboList)
-        self.combobox1.currentTextChanged.connect(self.dropDownValueChanged)
-
-        label6 = QLabel(self)
-        label6.setGeometry(50, 50, 400, 32)
-        label6.setText("Starting date")
-        label6.setFont(QFont('Arial', 10))
-        label6.move(250, 60)
-
-        self.dateedit = QDateEdit(self, calendarPopup=True)
-        dateNow = datetime.now() - timedelta(days=35)
-        date = QDate(dateNow.year, dateNow.month, dateNow.day)
-        self.dateedit.setDate(date)
-        self.dateedit.resize(120, 30)
-        self.dateedit.move(250, 100)
-        #self.dateedit.dateChanged.connect(self.startDateChanged)
-
-        button5 = QPushButton("Download data", self)
-        button5.move(50, 140)
-        button5.resize(110, 30)
-        button5.clicked.connect(self.button5_clicked)
-
-        label4 = QLabel(self)
-        label4.setGeometry(50, 50, 400, 32)
-        label4.setText("Select an algorithm for solution")
-        label4.setFont(QFont('Arial', 10))
-        label4.move(50, 180)
-
-        self.button1 = QPushButton("SVR", self)
-        self.button1.move(50, 220)
-        self.button1.resize(130, 50)
-        self.button1.clicked.connect(self.svr_chosen)
-        self.button1.setEnabled(False)
-
-        self.button2 = QPushButton("LSTM", self)
-        self.button2.move(200, 220)
-        self.button2.resize(130, 50)
-        self.button2.clicked.connect(self.lstm_chosen)
-        self.button2.setEnabled(False)
-
-        self.button3 = QPushButton("CNN", self)
-        self.button3.move(350, 220)
-        self.button3.resize(130, 50)
-        self.button3.clicked.connect(self.cnn_chosen)
-        self.button3.setEnabled(False)
-
-        button4 = QPushButton("Documentation", self)
-        button4.move(260, 320)
-        button4.resize(100, 30)
-        button4.clicked.connect(self.open_doc)
-
-        qbtn = QPushButton('Quit', self)
-        qbtn.clicked.connect(QApplication.instance().quit)
-        qbtn.resize(qbtn.sizeHint())
-        qbtn.move(380, 320)
-        qbtn.resize(100, 30)
 
 
 def main():

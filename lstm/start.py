@@ -5,20 +5,14 @@ from parameters import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from matplotlib.figure import Figure
 import PyQt5.QtCore as QtCore
 from stock_prediction import create_model, load_data
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
-import pyexcel
 import matplotlib
 matplotlib.use('Qt5Agg')
-import pandas as pd
 import matplotlib.pyplot as plt
-
-from sklearn.metrics import accuracy_score
+import ntpath
 import numpy as np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 
 class Window(QWidget):
@@ -29,7 +23,7 @@ class Window(QWidget):
         self.left = 200
         self.top = 200
         self.width = 500
-        self.height = 400
+        self.height = 500
         self.initUI()
 
     def initUI(self):
@@ -93,31 +87,60 @@ class Window(QWidget):
         self.spepochs.setGeometry(50, 50, 150, 20)
         self.spepochs.valueChanged.connect(self.numberOfEpochsChanged)
         self.spepochs.setMinimum(1)
-        self.spepochs.setMaximum(5000)
+        self.spepochs.setMaximum(100000)
         self.spepochs.setValue(300)
         self.spepochs.move(250, 140)
+
+        label6 = QLabel('Arial font', self)
+        label6.setGeometry(15, 15, 120, 20)
+        label6.move(50, 170)
+        label6.setText("Select a dataset:")
+        label6.setFont(QFont('Arial', 10))
+
+        self.filename = QTextEdit(self)
+        self.filename.setGeometry(50, 50, 250, 20)
+        self.filename.setText("No file selected")
+        self.filename.setFont(QFont('Arial', 9))
+        self.filename.move(50, 200)
+
+        button3 = QPushButton("Select data", self)
+        button3.move(320, 200)
+        button3.resize(80, 25)
+        button3.clicked.connect(self.openFileNameDialog)
 
         self.textbox = QTextEdit(self)
         self.textbox.setGeometry(50, 50, 350, 60)
         self.textbox.setText("The model is ready to start training.\nPress Train.")
         self.textbox.setFont(QFont('Arial', 9))
-        self.textbox.move(50, 190)
+        self.textbox.move(50, 240)
 
-        button1 = QPushButton("Train", self)
-        button1.move(50, 270)
-        button1.resize(150, 60)
-        button1.clicked.connect(self.train_model)
+        self.button1 = QPushButton("Train", self)
+        self.button1.move(50, 320)
+        self.button1.resize(150, 60)
+        self.button1.clicked.connect(self.train_model)
+        self.button1.setEnabled(False)
 
-        button2 = QPushButton("Test", self)
-        button2.move(250, 270)
-        button2.resize(150, 60)
-        button2.clicked.connect(self.test_model)
+        self.button2 = QPushButton("Predict", self)
+        self.button2.move(250, 320)
+        self.button2.resize(150, 60)
+        self.button2.clicked.connect(self.test_model)
+        self.button2.setEnabled(False)
 
         qbtn = QPushButton('Quit', self)
         qbtn.clicked.connect(QApplication.instance().quit)
         qbtn.resize(qbtn.sizeHint())
-        qbtn.move(300, 360)
+        qbtn.move(300, 420)
 
+    def openFileNameDialog(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
+                                                  "All Files (*);;Python Files (*.py)", options=options)
+        global row_data
+        self.filename.setText(fileName)
+        if fileName:
+            row_data = ntpath.basename(fileName)
+            self.button1.setEnabled(True)
 
     def numberOfEpochsChanged(self):
         parameters.EPOCHS = self.spepochs.value()
@@ -136,13 +159,13 @@ class Window(QWidget):
             self.textModified.emit(before, after)
 
     def plot_graph(self, model, data):
-
         X_test = data["X_predict"]
         y_pred = model.predict(X_test)
 
         y_test = data["y_predict"]
         y_test = np.squeeze(data["column_scaler"]["Close"].inverse_transform(np.expand_dims(y_test, axis=0)))
         y_pred = np.squeeze(data["column_scaler"]["Close"].inverse_transform(y_pred))
+        np.savetxt("1year30secTest.csv", y_pred, delimiter=",")
 
         tableau20 = [(31/255, 119/255, 180/255), (174/255, 199/255, 232/255), (255/255, 127/255, 14/255), (255/255, 187/255, 120/255)]
 
@@ -161,14 +184,17 @@ class Window(QWidget):
         x_train = data["X"]
         x_train = model.predict(x_train)
 
+
         y_train = data["y"]
         y_train = np.squeeze(data["column_scaler"]["Close"].inverse_transform(np.expand_dims(y_train, axis=0)))
         x_train = np.squeeze(data["column_scaler"]["Close"].inverse_transform(x_train))
+        np.savetxt("1year30secTrain.csv", x_train, delimiter=",")
 
         tableau20 = [(31 / 255, 119 / 255, 180 / 255), (174 / 255, 199 / 255, 232 / 255),
                      (255 / 255, 127 / 255, 14 / 255), (255 / 255, 187 / 255, 120 / 255)]
         plt.plot(y_train, lw=2.5, color=tableau20[2])
         plt.plot(x_train, lw=2.5, color=tableau20[3])
+
 
         plt.title('Training phase')
         plt.xlabel("Days")
@@ -195,6 +221,7 @@ class Window(QWidget):
 
     def train_model(self):
         self.textbox.setPlainText('Training...')
+        global row_data
         # create these folders if they does not exist
         cwd = os.getcwd()
         cwd = os.path.basename(cwd)
@@ -222,7 +249,7 @@ class Window(QWidget):
             logsdir = "lstm/logs"
 
         # load the data
-        data = load_data(parameters.ticker, parameters.N_STEPS, lookup_step=parameters.LOOKUP_STEP, test_size=parameters.TEST_SIZE, feature_columns=parameters.FEATURE_COLUMNS)
+        data = load_data(parameters.ticker, parameters.N_STEPS, lookup_step=parameters.LOOKUP_STEP, test_size=parameters.TEST_SIZE, feature_columns=parameters.FEATURE_COLUMNS, row_data=row_data)
 
         # construct the model
         model = create_model(parameters.N_STEPS, loss=parameters.LOSS, units=parameters.UNITS, cell=parameters.CELL, n_layers=parameters.N_LAYERS,
@@ -248,9 +275,11 @@ class Window(QWidget):
 
 
         self.textbox.setPlainText('The model finished training. Proceed with testing.')
+        self.button2.setEnabled(True)
 
 
     def test_model(self):
+        global row_data
         cwd = os.getcwd()
         cwd = os.path.basename(cwd)
         if cwd == 'lstm':
@@ -262,7 +291,7 @@ class Window(QWidget):
         self.textbox.setText('Testing...')
         # load the data
         data = load_data(ticker, parameters.N_STEPS, lookup_step=parameters.LOOKUP_STEP, test_size=parameters.TEST_SIZE,
-                         feature_columns=parameters.FEATURE_COLUMNS, shuffle=False)
+                         feature_columns=parameters.FEATURE_COLUMNS, shuffle=False, row_data =row_data)
 
         #   construct the model
         model = create_model(N_STEPS, loss=parameters.LOSS, units=parameters.UNITS, cell=parameters.CELL, n_layers=parameters.N_LAYERS,

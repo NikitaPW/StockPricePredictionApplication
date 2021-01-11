@@ -1,4 +1,4 @@
-SVR Executable
+SVRMenu Executable
 
 1. Prerequisites for Deployment 
 
@@ -19,7 +19,5 @@ from the following link on the MathWorks website:
 For more information about the MATLAB Runtime and the MATLAB Runtime installer, see 
 "Distribute Applications" in the MATLAB Compiler documentation  
 in the MathWorks Documentation Center.
-
-
 
 

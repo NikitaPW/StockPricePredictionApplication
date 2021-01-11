@@ -1,0 +1,1 @@
+pip install tensorflow==2.2.0 matplotlib==3.2.1 numpy==1.18.1 yahoo_fin==0.8.5 pandas==0.24.2 requests==2.23.0 PyQt5==5.15.2 scikit_learn==0.23.2

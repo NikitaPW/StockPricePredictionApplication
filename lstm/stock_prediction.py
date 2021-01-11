@@ -10,11 +10,11 @@ from parameters import *
 import numpy as np
 import pandas as pd
 import random
-from parameters import row_data, TRAIN_RAW
+from parameters import TRAIN_RAW
 
 
 def load_data(ticker, n_steps=50, scale=True, shuffle=True, lookup_step=1,
-              test_size=0.2, feature_columns=['High', 'Low', 'Open', 'Close', 'Volume', "OpenMax", "OpenMin", "Day"]):
+              test_size=0.2, feature_columns=['Open', 'Close'], row_data="wig20_d.csv"):
     """
     Loads data from Yahoo Finance source, as well as scaling, shuffling, normalizing and splitting.
     Params:
@@ -116,7 +116,7 @@ def load_data(ticker, n_steps=50, scale=True, shuffle=True, lookup_step=1,
 
     result["X_train"], result["X_test"], result["y_train"], result["y_test"] = train_test_split(X, y,
                                                                                                 test_size=TEST_SIZE,
-                                                                                                shuffle=False)
+                                                                                                shuffle=True)
 
     # return the result
     return result
