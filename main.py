@@ -7,6 +7,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import requests
+import webbrowser
 
 PATH = os.getcwd()
 
@@ -201,7 +202,7 @@ class Window(QWidget):
         self.button3.setEnabled(True)
 
     def open_doc(self):
-        os.system("notepad.exe Documentation.txt")
+        os.startfile('Documentation.pdf')
 
     def dropDownValueChanged(self):
         timevalue = self.combobox1.currentText()
