@@ -1,10 +1,4 @@
 ##############################################################
-# Constants
-##############################################################
-timeseries_length <- 6
-const_epochs <- 300
-
-##############################################################
 # Server
 ##############################################################
 server <- function(input, output, session) {
@@ -21,7 +15,7 @@ server <- function(input, output, session) {
   ############################################################
   
   data_name <- reactiveVal()
-  data_frame <- NULL
+  data_frame <- reactiveVal()
   name <- NULL
   model <- NULL
   X_train <- reactiveVal()
@@ -42,6 +36,7 @@ server <- function(input, output, session) {
   data_names <- get_data_names()
   history_change <- reactiveVal()
   epochs <- reactiveVal(const_epochs)
+  reps <- reactiveVal(const_reps)
   
   
   ############################################################
@@ -50,7 +45,7 @@ server <- function(input, output, session) {
   
   # Radio buttons choice changed handler
   observeEvent(input$model_radio, {
-    ts_length(6)
+    #ts_length(timeseries_length)
     output$dynamicModels <- renderUI({
       if (input$model_radio == FALSE) {
         div(
@@ -165,11 +160,23 @@ server <- function(input, output, session) {
     epochs(input$epochs)
   })
   
+  # Reps number input handler
+  observe({
+    reps(input$reps)
+  })
+  
   # Add model click handler
   onclick("add", {
     if (!is.null(name)) {
       if (name != "" &
-          !is.null(ts_length()) & !is.null(p_num) & !is.null(test_length)) {
+          !is.null(ts_length()) &
+          !is.null(p_num) & !is.null(test_length)) {
+        if (length(data_frame()$Open) < timeseries_length * 2) {
+          ts_length(timeseries_small)
+        } else {
+          ts_length(timeseries_length)
+        }
+        
         model <- model_initialization(ts_length(), 4)
         model_name <-
           glue::glue("{data_name()} {name} {ts_length()} {test_length} {p_num}")
@@ -192,7 +199,7 @@ server <- function(input, output, session) {
   onclick("prepare", {
     data <-
       prepare_data(
-        data_frame,
+        data_frame(),
         t_num = test_length,
         timeseires_length = ts_length(),
         p_num = p_num
@@ -204,7 +211,16 @@ server <- function(input, output, session) {
     test(data$Test)
     prediction(data$Predict)
     
+    # reset results
+    history_change(NULL)
+    train_result(NULL)
+    test_result(NULL)
+    prediction_result(NULL)
     prerared_flag(TRUE)
+    # reset console output
+    output$console <- renderPrint({
+      print("CONSOLE")
+    })
   })
   
   # Summary click handler
@@ -216,72 +232,191 @@ server <- function(input, output, session) {
   
   # Train click handler
   onclick("train", {
-    updateTabsetPanel(session, "plotTabs", selected = "trainPlot")
+    temp_train <- NULL
+    temp_test <- NULL
+    temp_prediction <- NULL
+    total_train <- NULL
+    total_test <- NULL
+    total_prediciton <- NULL
+    i <- 1
     
     # custom callback
     cb <- callback_lambda(
       on_epoch_end = function(epoch, logs) {
         html("console", {
-          glue::glue("Epoch: {epoch+1}/{epochs()}, loss: {logs$loss}, val_loss: {logs$val_loss}")
+          glue::glue("Rep: {i} \n Epoch: {epoch+1}/{epochs()}, loss: {logs$loss}, val_loss: {logs$val_loss}")
         })
       }
     )
-    history <-
-      model_training(model, X_train(), Y_train(), cb, epochs())
     
-    history_change(history)
-    model_save(model,
-               glue::glue("{data_name()} {name} {ts_length()} {test_length} {p_num}"))
-  })
-  
-  onclick("trainTest", {
-    updateTabsetPanel(session, "plotTabs", selected = "trainTestPlot")
-    if (!is.null(model)) {
+    for (i in 1:reps()) {
+      # Model reset
+      model <- model_initialization(ts_length(), 4)
+      
+      #Model training
+      history <-
+        model_training(model, X_train(), Y_train(), cb, epochs())
+      
+      history_change(history)
+      
+      #Model TrainTest computation
+      
       temp <-
         format(round(model_prediction(model, X_train()), 2), nsmall = 2)
-      train_result(as.numeric(temp))
       
-      # print accuracy to console
-      output$console <- renderPrint({
-        comp_accuracy(X_train()[, 1, 1][ts_length():length(X_train()[, 1, 1])], train_result())
-      })
-    }
-  })
-  
-  # Test click handler
-  onclick("test", {
-    updateTabsetPanel(session, "plotTabs", selected = "testPlot")
-    if (!is.null(model)) {
+      temp_train <- as.numeric(temp)
+      
+      #Model Test computation
+      
       temp <-
         format(round(model_prediction(model, X_test()), 2), nsmall = 2)
-      test_result(as.numeric(temp))
+      temp_test <- as.numeric(temp)
       
-      # print accuracy to console
-      output$console <- renderPrint({
-        comp_accuracy(test()[, 1][ts_length():length(test()[, 1])], test_result())
-      })
-    }
-  })
-  
-  # Prediction click handler
-  onclick("prediction", {
-    updateTabsetPanel(session, "plotTabs", selected = "predictionPlot")
-    if (!is.null(model)) {
+      #Model prediction computation
+      
       last_ts <- data$X_test[dim(data$X_test)[1], , ]
       known_open <- data$Predict[1, ]
       
       last_ts <- append_timeseries(last_ts, known_open)
       
-      real_prediction(model, last_ts, pnum = p_num)
       temp <-
         format(round(real_prediction(model, last_ts, pnum = p_num)[, 1], 2), nsmall = 2)
-      prediction_result(as.numeric(temp))
       
-      # print accuracy to console
-      output$console <- renderPrint({
-        comp_accuracy(prediction()[, 1], prediction_result())
-      })
+      temp_prediction <- as.numeric(temp)
+      
+      
+      # save results in total containers
+      if (i == 1) {
+        total_train <- temp_train
+        total_test <- temp_test
+        total_prediciton <- temp_prediction
+      } else {
+        total_train <- total_train  + temp_train
+        total_test <- total_test + temp_test
+        total_prediciton <- total_prediciton + temp_prediction
+      }
+      
+      updateTabsetPanel(session, "plotTabs", selected = "trainPlot")
     }
+    
+    Train_result <- total_train / reps()
+    Test_result <- total_test / reps()
+    Prediction_result <- total_prediciton / reps()
+    
+    
+    
+    # Save result to output csv
+    
+    write.table(
+      Train_result,
+      glue::glue("outputs/{data_name()}_{name}_TRAIN.csv"),
+      row.names = F,
+      col.names = F,
+      dec = ','
+    )
+    
+    write.table(
+      Test_result,
+      glue::glue("outputs/{data_name()}_{name}_TEST.csv"),
+      row.names = F,
+      col.names = F,
+      dec = ','
+    )
+    
+    write.table(
+      Prediction_result,
+      glue::glue("outputs/{data_name()}_{name}_PREDICTION.csv"),
+      row.names = F,
+      col.names = F,
+      dec = ','
+    )
+    
+    # Save resulted model
+    
+    model_save(model,
+               glue::glue("{data_name()} {name} {ts_length()} {test_length} {p_num}"))
+    
+  })
+  
+  onclick("trainTest", {
+    tryCatch(
+      train_result(read.csv(
+        glue("outputs/{data_name()}_{name}_TRAIN.csv"),
+        header = F,
+        sep = ";",
+        dec = ",",
+      )),
+      warning = function(w) {
+        
+      }
+      ,
+      error = function(e) {
+        
+      },
+      finally = {
+        if (!is.null(train_result())) {
+          updateTabsetPanel(session, "plotTabs", selected = "trainTestPlot")
+          # print accuracy to console
+          output$console <- renderPrint({
+            comp_accuracy(Y_train()[, 1], train_result()[, 1])
+          })
+        }
+      }
+    )
+  })
+  
+  # Test click handler
+  onclick("test", {
+    tryCatch(
+      test_result(read.csv(
+        glue("outputs/{data_name()}_{name}_TEST.csv"),
+        header = F,
+        sep = ";",
+        dec = ",",
+      )),
+      warning = function(w) {
+        
+      }
+      ,
+      error = function(e) {
+        
+      },
+      finally = {
+        if (!is.null(test_result())) {
+          updateTabsetPanel(session, "plotTabs", selected = "testPlot")
+          output$console <- renderPrint({
+            comp_accuracy(test()[, 1][(length(test()[, 1]) - length(test_result()[, 1]) + 1):length(test()[, 1])], test_result()[, 1])
+          })
+        }
+      }
+    )
+  })
+  
+  # Prediction click handler
+  onclick("prediction", {
+    tryCatch(
+      prediction_result(read.csv(
+        glue("outputs/{data_name()}_{name}_PREDICTION.csv"),
+        header = F,
+        sep = ";",
+        dec = ",",
+      )),
+      warning = function(w) {
+        
+      }
+      ,
+      error = function(e) {
+        
+      },
+      finally = {
+        if (!is.null(prediction_result())) {
+          updateTabsetPanel(session, "plotTabs", selected = "predictionPlot")
+          output$console <- renderPrint({
+            comp_accuracy(prediction()[, 1], prediction_result()[, 1])
+          })
+        }
+      }
+    )
   })
   
   
@@ -299,56 +434,40 @@ server <- function(input, output, session) {
         col.names = F,
         dec = ','
       )
-      plot_prediction(prediction()[, 1], prediction_result())
+      plot_prediction(prediction()[, 1], prediction_result()[, 1])
     }
   })
   
   # Dynamic raw data plot
   output$dynamicPlot <- renderPlot({
     if (!is.null(data_name()) & data_name() != "") {
-      data_frame <<- choose_data(data_name())
-      plot_raw_data(data_frame, data_name())
+      data_frame(choose_data(data_name()))
+      plot_raw_data(data_frame(), data_name())
     }
   })
   
   # Dynamic test data plot
   output$dynamicTest <- renderPlot({
     if (!is.null(test_result())) {
-      write.table(
-        test_result(),
-        glue::glue("outputs/{data_name()}_{name}_TEST.csv"),
-        row.names = F,
-        col.names = F,
-        dec = ','
-      )
-      plot_test(test()[, 1], test_result(), ts_length = ts_length())
+      plot_test(test()[, 1], test_result()[, 1])
     }
   })
   
   # Console text change
   output$console <- renderPrint({
-    print("TRAIN CONSOLE")
+    print("CONSOLE")
   })
   
   
   # Dynamic train result plot
   output$dynamicTrain <- renderPlot({
-    if (!is.null(history_change())) {
-      plot(history_change())
-    }
+    plot(history_change())
   })
   
   # Dynamic train result plot
   output$comparisonTrain <- renderPlot({
     if (!is.null(train_result())) {
-      write.table(
-        train_result(),
-        glue::glue("outputs/{data_name()}_{name}_TRAIN.csv"),
-        row.names = F,
-        col.names = F,
-        dec = ','
-      )
-      plot_prediction(X_train()[, 1, 1], train_result())
+      plot_prediction(Y_train()[, 1], train_result()[, 1])
     }
   })
   

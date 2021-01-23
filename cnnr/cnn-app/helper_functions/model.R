@@ -6,7 +6,6 @@
 model_initialization <- function(timeseires_length, features) {
   for (i in 1:6) {
     input <- layer_input(shape = c(timeseires_length, features))
-    
     layer <- input %>%
       layer_conv_1d(
         filters = 4,
@@ -23,9 +22,18 @@ model_initialization <- function(timeseires_length, features) {
         padding = "same",
         input_shape = c(timeseires_length / 2, features)
       ) %>%
+      layer_max_pooling_1d(pool_size = 2) %>%
+      layer_conv_1d(
+        filters = 4,
+        kernel_size = i,
+        activation = "relu",
+        padding = "same",
+        input_shape = c(timeseires_length / 4, features)
+      ) %>%
       layer_max_pooling_1d(pool_size = 2)
-    
-    assign(glue::glue("input_{i}"), input)
+      
+      
+      assign(glue::glue("input_{i}"), input)
     assign(glue::glue("output_{i}"), input)
   }
   
@@ -34,7 +42,7 @@ model_initialization <- function(timeseires_length, features) {
   output <-
     layer_concatenate(c(output_1, output_2, output_3, output_4, output_5, output_6)) %>%
     layer_flatten() %>%
-    #layer_dense(units = 50) %>%
+    layer_dense(units = 50, activation = 'relu') %>%
     layer_dense(units = 1)
   
   

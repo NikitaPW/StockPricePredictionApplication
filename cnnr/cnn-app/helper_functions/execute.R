@@ -4,7 +4,10 @@ prepare_data <-
            t_num,
            p_num = 5) {
     list <-
-      divide_data(data_frame, tnum = t_num, ts_length = timeseires_length)
+      divide_data(data_frame,
+                  tnum = t_num,
+                  ts_length = timeseires_length,
+                  pnum = p_num)
     train <- list$Train
     predict <- list$Predict
     actual <- list$Actual
@@ -45,7 +48,7 @@ real_prediction <- function(model, last_ts, pnum = 5) {
     dim(temp_ts) <-
       c(dim(temp_ts)[2], 4)# change it's dimensionality back to normal
     last_predicted <-
-      add_meta_data(temp_ts[dim(temp_ts)[1], ], last_predicted)
+      add_meta_data(temp_ts[dim(temp_ts)[1],], last_predicted)
     temp_ts <- append_timeseries(temp_ts, last_predicted)
     predictions <-
       rbind(predictions, last_predicted) # append to already predicted values

@@ -29,7 +29,8 @@ plot_train <- function(actual, test, ts_length) {
 }
 
 
-plot_test <- function(actual, test, ts_length) {
+plot_test <- function(actual, test) {
+  ts_length <- length(actual) - length(test) + 1
   dd <-
     data.frame(1:(length(actual) - ts_length + 1), actual[ts_length:length(actual)], test)
   colnames(dd) <- c("number", "actual", "predicted")

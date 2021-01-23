@@ -47,7 +47,12 @@ ui <- dashboardPage(
     h3("Actions section", style = "margin-left: 12px"),
     fluidRow(column(
       6,
-      numericInput("epochs", "Number of epochs", value = const_epochs)
+      numericInput("epochs", "Number of epochs", value = const_epochs),
+    ),
+    column(
+      6,
+      numericInput("reps", "Number of repetitions", value = const_reps),
+      
     )),
     
     

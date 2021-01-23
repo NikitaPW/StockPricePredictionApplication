@@ -40,10 +40,7 @@ form_timeseriese <- function(open, close = NULL, steps) {
     cbind(X_min) %>%
     cbind(X_day)
   
-  
-  
-  ##X <- list(input1 = X_open, input2 = X_max, input3 = X_min, input4 = X_day)
-  ##Y <- list(output = Y)
+  rownames(Y) <- NULL
   
   dim(X) <- c(count, steps, 4)
   
