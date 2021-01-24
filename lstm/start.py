@@ -314,6 +314,7 @@ class Window(QWidget):
 
 def start():
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')
     win = Window()
     win.show()
     sys.exit(app.exec_())
